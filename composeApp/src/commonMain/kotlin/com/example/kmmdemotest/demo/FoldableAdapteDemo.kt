@@ -58,6 +58,7 @@ fun FoldableAdapteDemo() {
                 when (selectedDemo) {
                     FoldableAdaptiveDemo.ListDetail -> FoldableListDetailDemo()
                     FoldableAdaptiveDemo.Feed -> FoldableFeedDemo()
+                    FoldableAdaptiveDemo.Files -> FoldableFilesDemo()
                     FoldableAdaptiveDemo.SupportingPane -> FoldableSupportingPaneDemo()
                     FoldableAdaptiveDemo.AdaptiveNavigation -> FoldableAdaptiveNavigationDemo()
                 }
@@ -102,6 +103,7 @@ private fun FoldableDemoSelector(
 private enum class FoldableAdaptiveDemo(val title: String) {
     ListDetail("ListDetail"),
     Feed("Feed"),
+    Files("Files"),
     SupportingPane("SupportingPane"),
     AdaptiveNavigation("Navigation"),
 }
