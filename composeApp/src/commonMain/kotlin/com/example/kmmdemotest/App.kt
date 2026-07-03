@@ -19,7 +19,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.kmmdemotest.demo.FoldableAdapteDemo
+import com.example.kmmdemotest.demo.foldable.FoldableAdapteDemo
 import com.example.kmmdemotest.utils.LogUtils
 import kotlinx.coroutines.isActive
 

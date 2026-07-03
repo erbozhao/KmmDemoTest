@@ -1,4 +1,4 @@
-package com.example.kmmdemotest.demo
+package com.example.kmmdemotest.demo.foldable
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +22,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldValue
+import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -85,8 +88,28 @@ actual fun FoldableAdaptiveNavigationDemo() {
     var selectedDestination by remember { mutableStateOf(AdaptiveNavigationDestination.Home) }
     val windowAdaptiveInfo = currentWindowAdaptiveInfo(supportLargeAndXLargeWidth = true)
     val windowSummary = windowAdaptiveInfo.windowSizeClass.widthDescription()
+    val showNavigationSuite =
+        windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
+            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
+        )
+    val navigationSuiteState = rememberNavigationSuiteScaffoldState(
+        initialValue = if (showNavigationSuite) {
+            NavigationSuiteScaffoldValue.Visible
+        } else {
+            NavigationSuiteScaffoldValue.Hidden
+        }
+    )
+
+    LaunchedEffect(showNavigationSuite) {
+        if (showNavigationSuite) {
+            navigationSuiteState.show()
+        } else {
+            navigationSuiteState.hide()
+        }
+    }
 
     NavigationSuiteScaffold(
+        state = navigationSuiteState,
         navigationSuiteItems = {
             AdaptiveNavigationDestination.entries.forEach { destination ->
                 item(

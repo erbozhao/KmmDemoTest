@@ -1,4 +1,4 @@
-package com.example.kmmdemotest.demo
+package com.example.kmmdemotest.demo.foldable
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

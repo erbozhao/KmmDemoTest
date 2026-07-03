@@ -1,4 +1,4 @@
-package com.example.kmmdemotest.demo
+package com.example.kmmdemotest.demo.foldable
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,32 +18,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-private data class SupportingPaneFallbackItem(
+private data class FallbackFeedItem(
     val id: Int,
     val title: String,
-    val body: String,
+    val category: String,
+    val summary: String,
 )
 
-private val supportingPaneFallbackItems = listOf(
-    SupportingPaneFallbackItem(
+private val fallbackFeedItems = listOf(
+    FallbackFeedItem(
         id = 1,
-        title = "Main article",
-        body = "Android uses a supporting pane to keep related notes and references near the main reading surface.",
+        title = "Adaptive feed layout",
+        category = "Featured",
+        summary = "Android uses window size classes to adapt feed columns across compact and expanded screens.",
     ),
-    SupportingPaneFallbackItem(
+    FallbackFeedItem(
         id = 2,
-        title = "Supporting content",
-        body = "The Android demo shows notes, outline items, and resources beside the document on larger screens.",
+        title = "Compact width",
+        category = "Phone",
+        summary = "Feed content falls back to a single vertical column.",
     ),
-    SupportingPaneFallbackItem(
+    FallbackFeedItem(
         id = 3,
-        title = "Compact behavior",
-        body = "On compact screens, users navigate between the main article and its supporting pane.",
+        title = "Expanded width",
+        category = "Foldable",
+        summary = "More horizontal space allows cards to spread across multiple columns.",
     ),
 )
 
 @Composable
-actual fun FoldableSupportingPaneDemo() {
+actual fun FoldableFeedDemo() {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -57,18 +61,18 @@ actual fun FoldableSupportingPaneDemo() {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Supporting Pane",
+                        text = "Foldable Feed",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "iOS placeholder for the Android adaptive supporting pane demo.",
+                        text = "iOS placeholder for the Android adaptive feed demo.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-            items(supportingPaneFallbackItems, key = { it.id }) { item ->
+            items(fallbackFeedItems, key = { it.id }) { item ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -80,6 +84,12 @@ actual fun FoldableSupportingPaneDemo() {
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
+                            text = item.category,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
                             text = item.title,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
@@ -87,7 +97,7 @@ actual fun FoldableSupportingPaneDemo() {
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            text = item.body,
+                            text = item.summary,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

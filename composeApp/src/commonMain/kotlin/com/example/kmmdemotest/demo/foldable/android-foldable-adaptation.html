@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Android 折叠屏适配技术方案</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --surface-soft: #eef3f8;
+      --text: #17202a;
+      --muted: #5d6978;
+      --line: #d8e0ea;
+      --primary: #0b6bcb;
+      --primary-dark: #064f99;
+      --accent: #0f766e;
+      --warn: #9a5b00;
+      --code-bg: #111827;
+      --code-text: #e5e7eb;
+      --shadow: 0 10px 28px rgba(22, 34, 51, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.65;
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 22px 64px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #ffffff 0%, #e8f2fc 100%);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      border-radius: 14px;
+      padding: 34px;
+      margin-bottom: 22px;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      max-width: 880px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #e7f0fb;
+      color: #174b7c;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    nav {
+      position: sticky;
+      top: 18px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    nav h2 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+
+    nav a {
+      display: block;
+      padding: 7px 8px;
+      border-radius: 8px;
+      color: #273445;
+      font-size: 14px;
+    }
+
+    nav a:hover {
+      background: var(--surface-soft);
+      text-decoration: none;
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    section {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 26px;
+      margin-bottom: 18px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 26px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 19px;
+      letter-spacing: 0;
+    }
+
+    h4 {
+      margin: 18px 0 8px;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ul, ol {
+      padding-left: 22px;
+      margin: 8px 0 14px;
+    }
+
+    li {
+      margin: 5px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #edf4fb;
+      text-align: left;
+      color: #1c344f;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+
+    :not(pre) > code {
+      background: #eef2f7;
+      border: 1px solid #dfe7f0;
+      border-radius: 5px;
+      padding: 1px 5px;
+      color: #1b3550;
+    }
+
+    pre {
+      overflow: auto;
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 10px;
+      padding: 16px;
+      margin: 12px 0 18px;
+      line-height: 1.5;
+      tab-size: 2;
+    }
+
+    pre code {
+      font-size: 13px;
+    }
+
+    .note {
+      border-left: 4px solid var(--primary);
+      background: #edf6ff;
+      padding: 12px 14px;
+      border-radius: 8px;
+      color: #22394f;
+      margin: 14px 0;
+    }
+
+    .warning {
+      border-left-color: var(--warn);
+      background: #fff7e6;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin: 14px 0;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfdff;
+      padding: 16px;
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #12263c;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .flow div {
+      background: #eef6f5;
+      border: 1px solid #c8e0dd;
+      border-radius: 9px;
+      padding: 12px;
+      text-align: center;
+      color: #164d49;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .source-list {
+      word-break: break-word;
+      font-size: 14px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 860px) {
+      .page {
+        padding: 16px 12px 44px;
+      }
+
+      .hero {
+        padding: 24px;
+      }
+
+      .layout {
+        display: block;
+      }
+
+      nav {
+        position: static;
+        margin-bottom: 18px;
+      }
+
+      section {
+        padding: 20px;
+      }
+
+      .grid, .flow {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <h1>Android 折叠屏适配技术方案</h1>
+      <p>
+        本文用于向技术同学说明折叠屏、大屏、多窗口场景下的布局适配逻辑和实现方式。方案同时覆盖 Jetpack Compose Material 3 Adaptive 实现与 Android View 原生实现，并结合当前本地 demo 代码讲解列表详情、Feeds、Files、辅助窗口、导航和 Activity Embedding。
+      </p>
+      <div class="meta">
+        <span class="pill">Compose: Material 3 Adaptive</span>
+        <span class="pill">View: RecyclerView / LinearLayout / Activity Embedding</span>
+        <span class="pill">核心断点: 600dp / 840dp / 1200dp</span>
+        <span class="pill">输出: HTML 技术文档</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav aria-label="目录">
+        <h2>目录</h2>
+        <a href="#overview">1. 总体策略</a>
+        <a href="#breakpoints">2. 断点与布局模型</a>
+        <a href="#compose">3. Compose 实现方案</a>
+        <a href="#compose-list-detail">3.1 列表详情</a>
+        <a href="#compose-feed">3.2 Feeds</a>
+        <a href="#compose-files">3.3 Files</a>
+        <a href="#compose-supporting">3.4 辅助窗口</a>
+        <a href="#compose-navigation">3.5 自适应导航</a>
+        <a href="#view">4. Android 原生实现方案</a>
+        <a href="#view-activity">4.1 容器 Activity</a>
+        <a href="#view-list-detail">4.2 列表详情</a>
+        <a href="#view-feed">4.3 Feeds</a>
+        <a href="#view-files">4.4 Files</a>
+        <a href="#view-supporting">4.5 辅助窗口</a>
+        <a href="#view-navigation">4.6 导航</a>
+        <a href="#embedding">4.7 Activity Embedding</a>
+        <a href="#acceptance">5. 验收与测试</a>
+        <a href="#sources">6. 参考资料</a>
+      </nav>
+
+      <main>
+        <section id="overview">
+          <h2>1. 总体策略</h2>
+          <p>
+            折叠屏适配不要以“设备型号”作为判断依据，而应以当前应用窗口的可用宽度、分屏状态和内容关系来决定布局。官方规范布局将常见信息架构抽象成 List-Detail、Feed、Supporting Pane 等模式，本项目 demo 也按这些模式拆分。
+          </p>
+          <div class="flow">
+            <div>窗口信息</div>
+            <div>布局断点</div>
+            <div>窗格数量</div>
+            <div>状态保持</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>场景</th>
+                <th>折叠 / 紧凑屏</th>
+                <th>展开 / 大屏</th>
+                <th>核心目标</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>列表详情</td>
+                <td>列表和详情单屏切换</td>
+                <td>列表 + 详情并排，超大屏可加 Extra</td>
+                <td>降低来回跳转，保持选中项稳定</td>
+              </tr>
+              <tr>
+                <td>Feeds</td>
+                <td>单列流式浏览</td>
+                <td>多列网格，重点内容跨列</td>
+                <td>提升信息密度但不改变阅读模型</td>
+              </tr>
+              <tr>
+                <td>Files</td>
+                <td>所有模块纵向排列</td>
+                <td>主文件信息与清理/工具区左右分栏</td>
+                <td>把低频辅助功能移到侧区</td>
+              </tr>
+              <tr>
+                <td>辅助窗口</td>
+                <td>主内容与辅助内容单屏切换</td>
+                <td>Main + Supporting 并排，宽屏可加 Extra</td>
+                <td>让上下文资料靠近主任务</td>
+              </tr>
+              <tr>
+                <td>导航</td>
+                <td>底部导航</td>
+                <td>Navigation Rail 或宽导航栏</td>
+                <td>导航形态变化，业务 destination 不变</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="note warning">
+            需求文字中 Compose 与原生 demo 路径和实际代码位置相反。本文以实际源码为准：Compose 在 <code>Code_KMM/KmmDemoTest</code>，Android View 原生 demo 在 <code>Code_Old/DemoTest</code>。
+          </div>
+        </section>
+
+        <section id="breakpoints">
+          <h2>2. 断点与布局模型</h2>
+          <p>
+            当前 demo 使用的主要宽度阈值如下。Compose 侧依赖 <code>WindowSizeClass</code> 和 Material 3 Adaptive scaffold；View 侧用 view 实际宽度换算 dp 后自行切换布局。
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>宽度范围</th>
+                <th>推荐布局</th>
+                <th>Compose demo</th>
+                <th>View demo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>&lt; 600dp</td>
+                <td>Compact：单窗格、底部导航、列表/详情跳转</td>
+                <td><code>WindowSizeClass</code> 小于 medium</td>
+                <td><code>widthDp() &lt; 600</code></td>
+              </tr>
+              <tr>
+                <td>&ge; 600dp</td>
+                <td>Medium：双窗格、双列 Feed、Navigation Rail</td>
+                <td><code>WIDTH_DP_MEDIUM_LOWER_BOUND</code></td>
+                <td>ListDetail/Files/Supporting 切到横向布局</td>
+              </tr>
+              <tr>
+                <td>&ge; 840dp</td>
+                <td>Expanded：三列 Feed、更宽导航面</td>
+                <td><code>WIDTH_DP_EXPANDED_LOWER_BOUND</code></td>
+                <td>Feed 三列，Navigation 宽模式</td>
+              </tr>
+              <tr>
+                <td>&ge; 1200dp</td>
+                <td>Large：更高密度网格，按业务谨慎增加窗格</td>
+                <td>Feed 四列</td>
+                <td>Feed 四列</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>
+            关键原则是“布局可变，状态稳定”：选中项、当前 destination、详情内容和返回栈语义不能因为折叠、展开、分屏或窗口拖拽而丢失。
+          </p>
+        </section>
+
+        <section id="compose">
+          <h2>3. Compose 实现方案</h2>
+          <p>
+            Compose demo 的入口是 <code>FoldableAdapteDemo</code>，通过顶部横向按钮切换五类 demo。公共层只负责选择 demo，Android 平台实现放在 <code>composeApp/src/androidMain/kotlin/com/example/kmmdemotest/demo/</code>。
+          </p>
+          <pre><code class="language-kotlin">@Composable
+fun FoldableAdapteDemo() {
+    var selectedDemoName by rememberSaveable {
+        mutableStateOf(FoldableAdaptiveDemo.ListDetail.name)
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        FoldableDemoSelector(...)
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            when (selectedDemo) {
+                FoldableAdaptiveDemo.ListDetail -&gt; FoldableListDetailDemo()
+                FoldableAdaptiveDemo.Feed -&gt; FoldableFeedDemo()
+                FoldableAdaptiveDemo.Files -&gt; FoldableFilesDemo()
+                FoldableAdaptiveDemo.SupportingPane -&gt; FoldableSupportingPaneDemo()
+                FoldableAdaptiveDemo.AdaptiveNavigation -&gt; FoldableAdaptiveNavigationDemo()
+            }
+        }
+    }
+}</code></pre>
+          <h3>Compose 依赖</h3>
+          <p>
+            当前 KMM 项目已引入 Material 3 Adaptive 相关依赖：
+          </p>
+          <pre><code class="language-kotlin">implementation(libs.compose.material3.adaptive)
+implementation(libs.compose.material3.adaptive.layout)
+implementation(libs.compose.material3.adaptive.navigation)
+implementation(libs.compose.material3.adaptive.navigation.suite)</code></pre>
+          <p>
+            Compose 侧推荐使用官方 scaffold 承担 pane 计算、导航历史、动画和返回语义，业务代码只维护选中项与内容渲染。
+          </p>
+        </section>
+
+        <section id="compose-list-detail">
+          <h2>3.1 Compose 列表详情布局</h2>
+          <p>
+            官方 List-Detail 模式适合“左侧集合 + 右侧详情”的信息架构。当前 demo 使用 <code>NavigableListDetailPaneScaffold</code> 和 <code>rememberListDetailPaneScaffoldNavigator</code>，在 medium 以上初始化 List + Detail；expanded 以上通过 <code>Extra</code> pane 增加附加信息区。
+          </p>
+          <div class="grid">
+            <div class="card">
+              <strong>Compact</strong>
+              初始只显示列表。点击列表项后导航到详情。返回键通过 scaffold navigator 回到列表。
+            </div>
+            <div class="card">
+              <strong>Medium / Expanded</strong>
+              列表保持可见，详情在右侧更新。更宽窗口可显示 Extra pane，用于 metadata、操作或上下文。
+            </div>
+          </div>
+          <pre><code class="language-kotlin">val windowAdaptiveInfo = currentWindowAdaptiveInfo(supportLargeAndXLargeWidth = true)
+val showExtraPane = windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
+    WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND
+)
+val baseScaffoldDirective =
+    calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(windowAdaptiveInfo)
+val scaffoldDirective = if (showExtraPane) {
+    baseScaffoldDirective.copy(maxHorizontalPartitions = 3)
+} else {
+    baseScaffoldDirective
+}
+
+val navigator = rememberListDetailPaneScaffoldNavigator&lt;Int&gt;(
+    scaffoldDirective = scaffoldDirective,
+    initialDestinationHistory = initialHistory,
+)
+
+NavigableListDetailPaneScaffold(
+    navigator = navigator,
+    listPane = { AnimatedPane { MailListPane(...) } },
+    detailPane = { AnimatedPane { MailDetailPane(...) } },
+    extraPane = { AnimatedPane { MailExtraPane(...) } },
+)</code></pre>
+          <h3>实现要点</h3>
+          <ul>
+            <li><code>selectedId</code> 是业务状态，pane 切换时不能重置。</li>
+            <li><code>initialDestinationHistory</code> 决定初始展开形态，避免大屏打开后还停留在单 pane。</li>
+            <li><code>LaunchedEffect(showListAndDetail, showExtraPane)</code> 处理窗口大小变化后的 pane 纠偏。</li>
+            <li>列表项点击后只更新 <code>selectedId</code> 并导航到 Detail，不创建新的页面模型。</li>
+          </ul>
+        </section>
+
+        <section id="compose-feed">
+          <h2>3.2 Compose Feeds 布局</h2>
+          <p>
+            Feed 是同级内容集合，展开后不应该变成“列表详情”，而应提高横向内容密度。当前 demo 使用 <code>LazyVerticalGrid</code>，按窗口宽度决定列数，重点卡片可跨 2 列。
+          </p>
+          <pre><code class="language-kotlin">private fun WindowSizeClass.feedColumnCount(): Int = when {
+    isWidthAtLeastBreakpoint(WIDTH_DP_XLARGE_LOWER_BOUND) -&gt; 4
+    isWidthAtLeastBreakpoint(WIDTH_DP_LARGE_LOWER_BOUND) -&gt; 4
+    isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -&gt; 3
+    isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -&gt; 2
+    else -&gt; 1
+}
+
+LazyVerticalGrid(columns = GridCells.Fixed(columns)) {
+    item(span = { GridItemSpan(columns) }) {
+        FeedHeader(columns = columns)
+    }
+    items(
+        items = adaptiveFeedItems,
+        key = { it.id },
+        span = { item -&gt; GridItemSpan(if (item.featured) minOf(2, columns) else 1) },
+    ) { item -&gt;
+        FeedCard(item = item, expanded = item.featured &amp;&amp; columns &gt; 1)
+    }
+}</code></pre>
+          <h3>实现要点</h3>
+          <ul>
+            <li>Compact 保持单列，保证扫描和滚动稳定。</li>
+            <li>Medium 使用两列，适合折叠屏展开后的自然宽度。</li>
+            <li>Expanded 及以上使用三到四列，但卡片最大宽度仍应可读。</li>
+            <li>重点卡片跨列只影响视觉层级，不改变数据顺序。</li>
+          </ul>
+        </section>
+
+        <section id="compose-files">
+          <h2>3.3 Compose Files 布局</h2>
+          <p>
+            Files 类型界面通常包含分类入口、最近文件、清理建议和工具动作。当前 demo 在 compact 下使用单列滚动；medium 以上切成左右两列：左侧是主要文件内容，右侧承载清理建议。
+          </p>
+          <pre><code class="language-kotlin">val expanded = windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
+    WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
+)
+
+if (expanded) {
+    Row(Modifier.fillMaxSize().padding(16.dp)) {
+        LazyColumn(Modifier.weight(1f).fillMaxSize()) {
+            item { FilesHeader() }
+            item { QuickActionRow() }
+            item { CategoryGrid() }
+            item { RecentFilesCard() }
+        }
+        LazyColumn(Modifier.weight(1f).fillMaxSize()) {
+            item { CleanCard(expanded = true) }
+        }
+    }
+} else {
+    LazyColumn(Modifier.fillMaxSize()) {
+        item { FilesHeader() }
+        item { QuickActionRow() }
+        item { CategoryGrid() }
+        item { RecentFilesCard() }
+        item { CleanCard(expanded = false) }
+    }
+}</code></pre>
+          <h3>实现要点</h3>
+          <ul>
+            <li>主要任务是“找文件”，清理和工具属于辅助信息，大屏适合右侧独立承载。</li>
+            <li>分类网格保持固定 4 列，减少展开后视觉跳动。</li>
+            <li>左右两列都用 <code>LazyColumn</code>，避免一个长列表拖累另一侧阅读。</li>
+          </ul>
+        </section>
+
+        <section id="compose-supporting">
+          <h2>3.4 Compose 辅助窗口布局</h2>
+          <p>
+            Supporting Pane 适合主内容旁边放“强相关但非主流程”的信息，例如笔记、目录、引用、属性和工具。当前 demo 使用 <code>SupportingPaneScaffold</code>，在可用宽度允许时同时显示 Main 和 Supporting，并为更宽窗口预留 Extra。
+          </p>
+          <pre><code class="language-kotlin">val scaffoldDirective =
+    calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(windowAdaptiveInfo)
+val showSupportingPane = scaffoldDirective.maxHorizontalPartitions &gt;= 2
+val showExtraPane = scaffoldDirective.maxHorizontalPartitions &gt;= 3
+
+val navigator = rememberSupportingPaneScaffoldNavigator&lt;String&gt;(
+    scaffoldDirective = scaffoldDirective,
+    initialDestinationHistory = initialHistory,
+)
+
+SupportingPaneScaffold(
+    directive = navigator.scaffoldDirective,
+    scaffoldState = navigator.scaffoldState,
+    mainPane = { AnimatedPane { DocumentPane(...) } },
+    supportingPane = { AnimatedPane { ReadingSupportPane(...) } },
+    extraPane = { AnimatedPane { ReadingExtraPane(...) } },
+)</code></pre>
+          <h3>实现要点</h3>
+          <ul>
+            <li>Compact 下 Main 是默认入口，用户主动打开 Supporting，返回后回到 Main。</li>
+            <li>展开时 Supporting 常驻，选择目录项时只更新主内容状态。</li>
+            <li>Extra pane 适合放全局工具或低频设置，不要抢主内容宽度。</li>
+          </ul>
+        </section>
+
+        <section id="compose-navigation">
+          <h2>3.5 Compose 自适应导航</h2>
+          <p>
+            自适应导航的重点是“同一套 destination 模型，不同窗口使用不同导航组件”。当前 demo 使用 <code>NavigationSuiteScaffold</code>，由官方组件根据窗口宽度选择底部导航、Navigation Rail 或更宽的导航形态。
+          </p>
+          <pre><code class="language-kotlin">var selectedDestination by remember {
+    mutableStateOf(AdaptiveNavigationDestination.Home)
+}
+
+NavigationSuiteScaffold(
+    navigationSuiteItems = {
+        AdaptiveNavigationDestination.entries.forEach { destination -&gt;
+            item(
+                selected = destination == selectedDestination,
+                onClick = { selectedDestination = destination },
+                icon = { DestinationIcon(destination) },
+                label = { Text(destination.label) },
+            )
+        }
+    },
+) {
+    AdaptiveNavigationContent(
+        destination = selectedDestination,
+        windowSummary = windowAdaptiveInfo.windowSizeClass.widthDescription(),
+    )
+}</code></pre>
+          <h3>实现要点</h3>
+          <ul>
+            <li>业务只关心 <code>selectedDestination</code>，不根据宽度手写三套导航。</li>
+            <li>窗口变化不应重置当前 tab。</li>
+            <li>内容区域按照 destination 渲染，导航 chrome 由 scaffold 接管。</li>
+          </ul>
+        </section>
+
+        <section id="view">
+          <h2>4. Android 原生 View 实现方案</h2>
+          <p>
+            Android View demo 位于 <code>/Users/onuszhao/Code_Old/DemoTest/app/src/main/kotlin/com/onus/demotest/feature/foldable/</code>。它不依赖 Compose scaffold，而是使用 <code>FrameLayout</code>、<code>LinearLayout</code>、<code>RecyclerView</code>、<code>GridLayoutManager</code> 和 Activity Embedding 规则手动实现自适应。
+          </p>
+          <h3>View 侧统一判断方式</h3>
+          <pre><code class="language-kotlin">private fun widthDp(): Int {
+    val w = if (width &gt; 0) width else resources.displayMetrics.widthPixels
+    return (w / resources.displayMetrics.density).toInt()
+}</code></pre>
+          <p>
+            View 方案适合现有原生页面低成本改造：不用整体迁移 Compose，但需要开发者自己维护窗格切换、返回处理和状态同步。
+          </p>
+        </section>
+
+        <section id="view-activity">
+          <h2>4.1 原生容器 Activity</h2>
+          <p>
+            <code>FoldableDemoActivity</code> 是原生 demo 的统一入口。顶部横向滚动 tab 选择 demo，下面的 <code>FrameLayout</code> 作为内容容器。Activity Embedding 是独立 Activity 组，点击 tab 时直接启动 primary Activity。
+          </p>
+          <pre><code class="language-kotlin">private fun renderDemo(type: FoldableDemoType) {
+    contentContainer.removeAllViews()
+    val view = when (type) {
+        FoldableDemoType.LIST_DETAIL -&gt; ListDetailDemoView(this)
+        FoldableDemoType.FEED -&gt; FeedDemoView(this)
+        FoldableDemoType.FILES -&gt; FilesDemoView(this)
+        FoldableDemoType.SUPPORTING_PANE -&gt; SupportingPaneDemoView(this)
+        FoldableDemoType.ADAPTIVE_NAVIGATION -&gt; AdaptiveNavigationDemoView(this)
+        FoldableDemoType.ACTIVITY_EMBEDDING -&gt; error("Handled above")
+    }
+    currentBackHandler = view as? FoldableBackHandler
+    contentContainer.addView(view)
+}</code></pre>
+          <h3>实现要点</h3>
+          <ul>
+            <li><code>selectedType</code> 通过 <code>onSaveInstanceState</code> 保存，旋转或重建后仍停留在当前 demo。</li>
+            <li>实现 <code>FoldableBackHandler</code> 的子 View 可以优先消费返回事件。</li>
+            <li>所有 demo 直接创建 View，便于说明原生适配逻辑，但生产项目可以迁移到 XML、Fragment 或自定义 ViewGroup。</li>
+          </ul>
+        </section>
+
+        <section id="view-list-detail">
+          <h2>4.2 原生列表详情布局</h2>
+          <p>
+            <code>ListDetailDemoView</code> 使用 <code>widthDp &gt;= 600</code> 作为双窗格阈值。紧凑屏显示列表，点击后切到详情；展开屏使用横向 <code>LinearLayout</code>，左侧固定 340dp 列表，右侧详情占剩余空间。
+          </p>
+          <pre><code class="language-kotlin">if (expanded) {
+    addView(createListPane(), LinearLayout.LayoutParams(context.dp(340), -1))
+    addView(createDetailPane(showBack = false), LinearLayout.LayoutParams(0, -1, 1f))
+} else if (showingDetailCompact) {
+    addView(createDetailPane(showBack = true), LinearLayout.LayoutParams(-1, -1))
+} else {
+    addView(createListPane(), LinearLayout.LayoutParams(-1, -1))
+}</code></pre>
+          <h3>返回处理</h3>
+          <pre><code class="language-kotlin">override fun handleBack(): Boolean {
+    if (!isExpanded() &amp;&amp; showingDetailCompact) {
+        showingDetailCompact = false
+        render()
+        return true
+    }
+    return false
+}</code></pre>
+          <p>
+            这个实现的核心是 <code>selectedItem</code> 独立于布局形态保存。窗口从紧凑变展开时重渲染，但选中详情保持不变。
+          </p>
+        </section>
+
+        <section id="view-feed">
+          <h2>4.3 原生 Feeds 布局</h2>
+          <p>
+            <code>FeedDemoView</code> 使用 <code>RecyclerView + GridLayoutManager</code> 实现动态列数。相比 Compose 的 <code>LazyVerticalGrid</code>，原生版本需要手动设置 <code>spanCount</code> 并通过 <code>SpanSizeLookup</code> 控制重点卡片跨列。
+          </p>
+          <pre><code class="language-kotlin">override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+    val widthDp = (w / resources.displayMetrics.density).toInt()
+    gridLayoutManager.spanCount = when {
+        widthDp &gt;= 1200 -&gt; 4
+        widthDp &gt;= 840 -&gt; 3
+        widthDp &gt;= 600 -&gt; 2
+        else -&gt; 1
+    }
+    gridLayoutManager.spanSizeLookup.invalidateSpanIndexCache()
+    feedAdapter.notifyDataSetChanged()
+}</code></pre>
+          <pre><code class="language-kotlin">gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+    override fun getSpanSize(position: Int): Int =
+        feedAdapter.spanSize(position, gridLayoutManager.spanCount)
+}</code></pre>
+          <h3>实现要点</h3>
+          <ul>
+            <li>列数变化只改变布局密度，不改变 adapter 数据。</li>
+            <li>首条或重点内容可以跨全部列或 2 列，增强层级。</li>
+            <li>窗口尺寸变化后需要刷新 span cache 和 adapter。</li>
+          </ul>
+        </section>
+
+        <section id="view-files">
+          <h2>4.4 原生 Files 布局</h2>
+          <p>
+            <code>FilesDemoView</code> 在紧凑屏下使用一个 <code>ScrollView</code> 串起标题、快捷操作、分类、最近文件和清理卡片。展开后根 <code>LinearLayout</code> 改为横向，清理卡片移动到右侧独立列。
+          </p>
+          <pre><code class="language-kotlin">val expanded = widthDp() &gt;= 600
+val root = LinearLayout(context).apply {
+    orientation = if (expanded) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+}
+
+root.addView(main, LinearLayout.LayoutParams(0, -1, if (expanded) 1f else 0f))
+if (expanded) {
+    root.addView(scrollColumn {
+        setPadding(context.dp(16), context.dp(56), 0, 0)
+        addSpaced(cleanCard())
+    }, LinearLayout.LayoutParams(0, -1, 1f))
+}</code></pre>
+          <h3>实现要点</h3>
+          <ul>
+            <li>文件分类用 <code>GridLayout</code> 固定 4 列，展开后保持认知位置。</li>
+            <li>右侧清理区只在大屏常驻，紧凑屏保持在主滚动流末尾。</li>
+            <li>窗口宽度变化时调用 <code>render()</code> 重建布局。</li>
+          </ul>
+        </section>
+
+        <section id="view-supporting">
+          <h2>4.5 原生辅助窗口布局</h2>
+          <p>
+            <code>SupportingPaneDemoView</code> 手动模拟 Compose <code>SupportingPaneScaffold</code>。紧凑屏只显示 Main 或 Supporting；展开后同时显示 Main 和 Supporting；宽度达到约 1000dp 后再增加 Extra 工具栏。
+          </p>
+          <pre><code class="language-kotlin">if (expanded) {
+    root.addView(documentPane(false), LinearLayout.LayoutParams(0, -1, 2f))
+    root.addView(supportPane(false), LinearLayout.LayoutParams(0, -1, 1f))
+    if (widthDp() &gt;= 1000) {
+        root.addView(extraPane(), LinearLayout.LayoutParams(0, -1, 1f))
+    }
+} else {
+    root.addView(
+        if (showingSupportCompact) supportPane(true) else documentPane(true),
+        LinearLayout.LayoutParams(-1, -1),
+    )
+}</code></pre>
+          <h3>实现要点</h3>
+          <ul>
+            <li><code>showingSupportCompact</code> 表示紧凑屏当前是否在辅助页。</li>
+            <li>实现 <code>FoldableBackHandler</code>，紧凑屏返回优先回 Main。</li>
+            <li>展开屏不显示 Back 按钮，因为 Main 和 Supporting 同时可见。</li>
+          </ul>
+        </section>
+
+        <section id="view-navigation">
+          <h2>4.6 原生自适应导航</h2>
+          <p>
+            <code>AdaptiveNavigationDemoView</code> 手动实现三种导航形态：紧凑底部导航、medium 侧边 rail、expanded 宽导航面。业务 destination 枚举保持不变。
+          </p>
+          <pre><code class="language-kotlin">val mode = when {
+    widthDp &gt;= 840 -&gt; NavMode.WIDE
+    widthDp &gt;= 600 -&gt; NavMode.RAIL
+    else -&gt; NavMode.BOTTOM
+}
+
+if (mode == NavMode.BOTTOM) {
+    container.addView(contentView(), LinearLayout.LayoutParams(-1, 0, 1f))
+    container.addView(navBar(horizontal = true), LinearLayout.LayoutParams(-1, context.dp(64)))
+} else {
+    val navWidth = if (mode == NavMode.WIDE) context.dp(220) else context.dp(84)
+    container.addView(navBar(horizontal = false), LinearLayout.LayoutParams(navWidth, -1))
+    container.addView(contentView(), LinearLayout.LayoutParams(0, -1, 1f))
+}</code></pre>
+          <h3>实现要点</h3>
+          <ul>
+            <li><code>selectedDestination</code> 是稳定业务状态，切换导航模式不重置。</li>
+            <li>底部导航占用高度，rail/宽导航占用宽度，内容区域按剩余空间渲染。</li>
+            <li>生产实现建议使用 Material Components 的 NavigationBarView / NavigationRailView 统一样式。</li>
+          </ul>
+        </section>
+
+        <section id="embedding">
+          <h2>4.7 Activity Embedding</h2>
+          <p>
+            Activity Embedding 适合既有多 Activity 架构：不把页面合并成单 Activity，也能在大屏上把 primary 和 secondary 并排展示。当前 demo 通过 AndroidX Window 的 <code>RuleController</code> 加载 XML 规则。
+          </p>
+          <h3>初始化规则</h3>
+          <pre><code class="language-kotlin">class FoldableSplitInitializer : Initializer&lt;Unit&gt; {
+    override fun create(context: Context) {
+        val controllerClass = Class.forName("androidx.window.embedding.RuleController")
+        val getInstance = controllerClass.getMethod("getInstance", Context::class.java)
+        val parseRules = controllerClass.getMethod("parseRules", Context::class.java, Int::class.javaPrimitiveType)
+        val setRules = controllerClass.getMethod("setRules", Set::class.java)
+        val controller = getInstance.invoke(null, context)
+        val rules = parseRules.invoke(null, context, R.xml.foldable_activity_embedding_rules)
+        setRules.invoke(controller, rules)
+    }
+}</code></pre>
+          <h3>SplitPairRule</h3>
+          <pre><code class="language-xml">&lt;SplitPairRule
+    window:clearTop="true"
+    window:finishPrimaryWithSecondary="never"
+    window:finishSecondaryWithPrimary="always"
+    window:splitMinWidthDp="600"
+    window:splitRatio="0.35"&gt;
+    &lt;SplitPairFilter
+        window:primaryActivityName=".feature.foldable.embedding.FoldableEmbeddingPrimaryActivity"
+        window:secondaryActivityName=".feature.foldable.embedding.FoldableEmbeddingSecondaryActivity" /&gt;
+&lt;/SplitPairRule&gt;</code></pre>
+          <h3>业务流程</h3>
+          <ol>
+            <li><code>FoldableDemoActivity</code> 点击 ActivityEmbedding tab，启动 <code>FoldableEmbeddingPrimaryActivity</code>。</li>
+            <li>Primary Activity 显示列表，点击项后启动 <code>FoldableEmbeddingSecondaryActivity</code> 并通过 intent 传详情数据。</li>
+            <li>当窗口宽度满足 <code>splitMinWidthDp=600</code> 且系统支持 embedding 时，secondary 出现在右侧；否则作为普通 Activity 全屏打开。</li>
+            <li><code>finishSecondaryWithPrimary="always"</code> 保证 primary 关闭时 secondary 一起结束；<code>finishPrimaryWithSecondary="never"</code> 允许关闭 secondary 后保留 primary。</li>
+          </ol>
+          <div class="note">
+            当前 app 依赖中包含 <code>androidx.window:window:1.5.1</code> 和 <code>androidx.startup:startup-runtime:1.2.0</code>，满足 Activity Embedding 规则加载所需基础能力。
+          </div>
+        </section>
+
+        <section id="acceptance">
+          <h2>5. 验收与测试</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>测试项</th>
+                <th>验收标准</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Compact 宽度</td>
+                <td>列表详情、辅助窗口只显示一个主 pane；返回键能从详情/辅助页回到列表/主内容。</td>
+              </tr>
+              <tr>
+                <td>Medium 宽度</td>
+                <td>列表详情双窗格；Files 左右分栏；Feed 两列；导航切换为 rail 或等价侧边模式。</td>
+              </tr>
+              <tr>
+                <td>Expanded 宽度</td>
+                <td>Feed 三列及以上；Compose ListDetail 可显示 Extra；辅助窗口可显示更多上下文区。</td>
+              </tr>
+              <tr>
+                <td>状态保持</td>
+                <td>折叠/展开、旋转、拖拽分屏后，选中 item 和当前 destination 不丢失。</td>
+              </tr>
+              <tr>
+                <td>Activity Embedding</td>
+                <td>支持环境下 primary/secondary 并排；不支持时 secondary 仍可全屏独立打开。</td>
+              </tr>
+              <tr>
+                <td>视觉质量</td>
+                <td>无文本重叠、无异常留白、列表点击态清晰、宽屏内容不过度拉伸。</td>
+              </tr>
+            </tbody>
+          </table>
+          <h3>建议命令</h3>
+          <pre><code class="language-shell"># KMM Compose demo 编译检查
+./gradlew :composeApp:assembleDebug
+
+# 原生 DemoTest 项目可在其项目根目录执行
+./gradlew :app:assembleDebug</code></pre>
+        </section>
+
+        <section id="sources">
+          <h2>6. 参考资料与源码位置</h2>
+          <h3>官方文档</h3>
+          <ul class="source-list">
+            <li><a href="https://developer.android.com/develop/adaptive-apps/guides/canonical-layouts?hl=zh-cn">Compose / Adaptive Apps 规范布局</a></li>
+            <li><a href="https://developer.android.com/develop/adaptive-apps/guides/list-detail?hl=zh-cn">Compose 构建列表详情布局</a></li>
+            <li><a href="https://developer.android.com/develop/adaptive-apps/guides/build-a-supporting-pane-layout?hl=zh-cn">Compose 构建辅助窗格布局</a></li>
+            <li><a href="https://developer.android.com/develop/adaptive-apps/guides/build-adaptive-navigation?hl=zh-cn">Compose 构建自适应导航</a></li>
+            <li><a href="https://developer.android.com/develop/ui/views/layout/canonical-layouts?hl=zh-cn">Android View 规范布局</a></li>
+            <li><a href="https://developer.android.com/develop/ui/views/layout/twopane?hl=zh-cn">Android View 双窗格布局</a></li>
+            <li><a href="https://developer.android.com/codelabs/basic-android-kotlin-training-adaptive-layouts?hl=zh-cn">自适应布局 Codelab</a></li>
+            <li><a href="https://developer.android.com/develop/ui/views/layout/activity-embedding?hl=zh-cn#multiple_activities_secondary_pane">Activity 嵌入</a></li>
+          </ul>
+          <h3>本地源码</h3>
+          <ul class="source-list">
+            <li>Compose 入口：<code>/Users/onuszhao/Code_KMM/KmmDemoTest/composeApp/src/commonMain/kotlin/com/example/kmmdemotest/demo/FoldableAdapteDemo.kt</code></li>
+            <li>Compose Android 实现：<code>/Users/onuszhao/Code_KMM/KmmDemoTest/composeApp/src/androidMain/kotlin/com/example/kmmdemotest/demo/</code></li>
+            <li>Android View 原生 demo：<code>/Users/onuszhao/Code_Old/DemoTest/app/src/main/kotlin/com/onus/demotest/feature/foldable/</code></li>
+            <li>Activity Embedding 规则：<code>/Users/onuszhao/Code_Old/DemoTest/app/src/main/res/xml/foldable_activity_embedding_rules.xml</code></li>
+          </ul>
+          <p class="small">
+            文档生成日期：2026-07-02。本文代码摘录来自本地 demo，内容侧重技术讲解，未复制完整源码。
+          </p>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

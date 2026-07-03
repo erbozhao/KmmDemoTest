@@ -1,4 +1,4 @@
-package com.example.kmmdemotest.demo
+package com.example.kmmdemotest.demo.foldable
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

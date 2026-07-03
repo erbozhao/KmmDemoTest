@@ -1,4 +1,4 @@
-package com.example.kmmdemotest.demo
+package com.example.kmmdemotest.demo.foldable
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -133,14 +134,6 @@ actual fun FoldableSupportingPaneDemo() {
     )
     val scope = rememberCoroutineScope()
 
-    if (!showSupportingPane) {
-        DocumentPane(
-            selectedSection = selectedSection,
-            onOpenSupportingPane = {},
-        )
-        return
-    }
-
     LaunchedEffect(showSupportingPane, showExtraPane) {
         if (showExtraPane) {
             navigator.navigateTo(
@@ -224,7 +217,7 @@ private fun DocumentPane(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
+            contentPadding = PaddingValues(20.dp),
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -411,7 +404,7 @@ private fun ReadingExtraPane(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
+            contentPadding = PaddingValues(20.dp),
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
