@@ -30,8 +30,10 @@ import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.AnimatedPane
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import androidx.compose.material3.adaptive.layout.PaneExpansionAnchor
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationItem
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth
+import androidx.compose.material3.adaptive.layout.rememberPaneExpansionState
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
@@ -138,6 +140,10 @@ actual fun FoldableListDetailDemo() {
         scaffoldDirective = scaffoldDirective,
         initialDestinationHistory = initialHistory,
     )
+    val paneExpansionState = rememberPaneExpansionState(
+        anchors = listOf(PaneExpansionAnchor.Proportion(0.4f)),
+        initialAnchoredIndex = 0,
+    )
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(showListAndDetail, showExtraPane) {
@@ -195,6 +201,7 @@ actual fun FoldableListDetailDemo() {
                 MailExtraPane(mail = selectedMail)
             }
         },
+        paneExpansionState = paneExpansionState,
         modifier = Modifier.fillMaxSize(),
     )
 }
