@@ -319,7 +319,7 @@
       </p>
       <div class="meta">
         <span class="pill">Compose: Material 3 Adaptive</span>
-        <span class="pill">View: RecyclerView / LinearLayout / Activity Embedding</span>
+        <span class="pill">View: RecyclerView / SlidingPaneLayout / Activity Embedding</span>
         <span class="pill">核心断点: 600dp / 840dp / 1200dp</span>
         <span class="pill">输出: HTML 技术文档</span>
       </div>
@@ -339,11 +339,12 @@
         <a href="#view">4. Android 原生实现方案</a>
         <a href="#view-activity">4.1 容器 Activity</a>
         <a href="#view-list-detail">4.2 列表详情</a>
-        <a href="#view-feed">4.3 Feeds</a>
-        <a href="#view-files">4.4 Files</a>
-        <a href="#view-supporting">4.5 辅助窗口</a>
-        <a href="#view-navigation">4.6 导航</a>
-        <a href="#embedding">4.7 Activity Embedding</a>
+        <a href="#view-sliding-pane">4.3 SlidingPaneLayout</a>
+        <a href="#view-feed">4.4 Feeds</a>
+        <a href="#view-files">4.5 Files</a>
+        <a href="#view-supporting">4.6 辅助窗口</a>
+        <a href="#view-navigation">4.7 导航</a>
+        <a href="#embedding">4.8 Activity Embedding</a>
         <a href="#acceptance">5. 验收与测试</a>
         <a href="#sources">6. 参考资料</a>
       </nav>
@@ -402,8 +403,8 @@
               </tr>
             </tbody>
           </table>
-          <div class="note warning">
-            需求文字中 Compose 与原生 demo 路径和实际代码位置相反。本文以实际源码为准：Compose 在 <code>Code_KMM/KmmDemoTest</code>，Android View 原生 demo 在 <code>Code_Old/DemoTest</code>。
+          <div class="note">
+            本文以当前 KMM 项目为主要源码口径：Compose demo 与 Android 原生 demo 都归档在 <code>/Users/onuszhao/Code_KMM/KmmDemoTest</code> 项目下；HTML 文档当前位于 <code>composeApp/src/commonMain/kotlin/com/example/kmmdemotest/demo/foldable/</code>。
           </div>
         </section>
 
@@ -426,13 +427,13 @@
                 <td>&lt; 600dp</td>
                 <td>Compact：单窗格、底部导航、列表/详情跳转</td>
                 <td><code>WindowSizeClass</code> 小于 medium</td>
-                <td><code>widthDp() &lt; 600</code></td>
+                <td><code>SlidingPaneLayout</code> 锁定为单 pane 体验，列表点击滑入详情</td>
               </tr>
               <tr>
                 <td>&ge; 600dp</td>
                 <td>Medium：双窗格、双列 Feed、Navigation Rail</td>
                 <td><code>WIDTH_DP_MEDIUM_LOWER_BOUND</code></td>
-                <td>ListDetail/Files/Supporting 切到横向布局</td>
+                <td>ListDetail 可由 <code>SlidingPaneLayout</code> 自动并排；Files/Supporting 切到横向布局</td>
               </tr>
               <tr>
                 <td>&ge; 840dp</td>
@@ -676,7 +677,7 @@ NavigationSuiteScaffold(
         <section id="view">
           <h2>4. Android 原生 View 实现方案</h2>
           <p>
-            Android View demo 位于 <code>/Users/onuszhao/Code_Old/DemoTest/app/src/main/kotlin/com/onus/demotest/feature/foldable/</code>。它不依赖 Compose scaffold，而是使用 <code>FrameLayout</code>、<code>LinearLayout</code>、<code>RecyclerView</code>、<code>GridLayoutManager</code> 和 Activity Embedding 规则手动实现自适应。
+            Android View demo 位于 <code>/Users/onuszhao/Code_KMM/KmmDemoTest</code> 项目下，以 <code>FoldableDemoActivity</code> 作为原生适配入口。它不依赖 Compose scaffold，而是使用 <code>FrameLayout</code>、<code>LinearLayout</code>、<code>RecyclerView</code>、<code>GridLayoutManager</code>、<code>SlidingPaneLayout</code> 和 Activity Embedding 规则实现自适应。
           </p>
           <h3>View 侧统一判断方式</h3>
           <pre><code class="language-kotlin">private fun widthDp(): Int {
@@ -684,7 +685,7 @@ NavigationSuiteScaffold(
     return (w / resources.displayMetrics.density).toInt()
 }</code></pre>
           <p>
-            View 方案适合现有原生页面低成本改造：不用整体迁移 Compose，但需要开发者自己维护窗格切换、返回处理和状态同步。
+            View 方案适合现有原生页面低成本改造：不用整体迁移 Compose。对于列表详情场景，优先使用 <code>SlidingPaneLayout</code> 让系统组件处理折叠、并排、滑动和返回语义；对于 Feed、Files、辅助窗口等更自由的界面，再按窗口宽度手动切换布局。
           </p>
         </section>
 
@@ -717,32 +718,190 @@ NavigationSuiteScaffold(
         <section id="view-list-detail">
           <h2>4.2 原生列表详情布局</h2>
           <p>
-            <code>ListDetailDemoView</code> 使用 <code>widthDp &gt;= 600</code> 作为双窗格阈值。紧凑屏显示列表，点击后切到详情；展开屏使用横向 <code>LinearLayout</code>，左侧固定 340dp 列表，右侧详情占剩余空间。
+            原生列表详情现在推荐使用 <code>SlidingPaneLayout</code> 实现。它是 Android View 体系里专门面向双窗格和可折叠列表详情的容器：子 View 按“列表 pane + 详情 pane”声明，系统根据可用宽度决定是并排显示，还是在紧凑宽度下让详情页滑入覆盖列表。
           </p>
-          <pre><code class="language-kotlin">if (expanded) {
-    addView(createListPane(), LinearLayout.LayoutParams(context.dp(340), -1))
-    addView(createDetailPane(showBack = false), LinearLayout.LayoutParams(0, -1, 1f))
-} else if (showingDetailCompact) {
-    addView(createDetailPane(showBack = true), LinearLayout.LayoutParams(-1, -1))
-} else {
-    addView(createListPane(), LinearLayout.LayoutParams(-1, -1))
+          <p>
+            这里的“折叠/展开”不是由业务代码直接判断设备类型，而是由 <code>SlidingPaneLayout</code> 在测量阶段决定：如果父容器宽度足够容纳两个 pane，组件进入非滑动的并排态；如果宽度不足，组件进入可滑动的折叠态。业务代码只需要根据 <code>isSlideable</code> 和 <code>isOpen</code> 处理交互。
+          </p>
+          <div class="grid">
+            <div class="card">
+              <strong>紧凑宽度</strong>
+              <code>isSlideable == true</code>。默认只看列表。点击列表项后调用 <code>openPane()</code> 打开详情；返回时先调用 <code>closePane()</code> 回到列表。
+            </div>
+            <div class="card">
+              <strong>展开宽度</strong>
+              <code>isSlideable == false</code>。列表和详情同时可见。点击列表项只更新详情内容，不需要重建整个布局，也不需要手动处理横向分栏。
+            </div>
+          </div>
+          <pre><code class="language-kotlin">private lateinit var slidingPaneLayout: SlidingPaneLayout
+private var selectedItem = sampleMails().first()
+
+private fun createListDetailWithSlidingPane(): View {
+    slidingPaneLayout = SlidingPaneLayout(this).apply {
+        layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+        lockMode = SlidingPaneLayout.LOCK_MODE_UNLOCKED
+    }
+
+    val listPane = RecyclerView(this).apply {
+        layoutManager = LinearLayoutManager(this@FoldableDemoActivity)
+        adapter = SimpleTextAdapter(sampleMails(), { selectedItem.id }) { item -&gt;
+            selectedItem = item
+            renderDetail(item)
+            if (slidingPaneLayout.isSlideable) {
+                slidingPaneLayout.openPane()
+            }
+        }
+    }
+
+    val detailPane = createDetailPane(selectedItem)
+
+    slidingPaneLayout.addView(
+        listPane,
+        SlidingPaneLayout.LayoutParams(dp(340), MATCH_PARENT),
+    )
+    slidingPaneLayout.addView(
+        detailPane,
+        SlidingPaneLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT),
+    )
+    return slidingPaneLayout
 }</code></pre>
           <h3>返回处理</h3>
-          <pre><code class="language-kotlin">override fun handleBack(): Boolean {
-    if (!isExpanded() &amp;&amp; showingDetailCompact) {
-        showingDetailCompact = false
-        render()
-        return true
+          <pre><code class="language-kotlin">onBackPressedDispatcher.addCallback(this) {
+    val shouldCloseDetail = ::slidingPaneLayout.isInitialized
+        &amp;&amp; slidingPaneLayout.isSlideable
+        &amp;&amp; slidingPaneLayout.isOpen
+
+    if (shouldCloseDetail) {
+        slidingPaneLayout.closePane()
+    } else {
+        isEnabled = false
+        onBackPressedDispatcher.onBackPressed()
     }
-    return false
 }</code></pre>
           <p>
-            这个实现的核心是 <code>selectedItem</code> 独立于布局形态保存。窗口从紧凑变展开时重渲染，但选中详情保持不变。
+            这个实现的核心是让 <code>SlidingPaneLayout</code> 管理“是否能并排”和“是否需要滑动打开详情”，业务层只维护 <code>selectedItem</code> 和详情内容。相比手写 <code>widthDp &gt;= 600</code> 的 <code>LinearLayout</code> 方案，它减少了重复布局分支，也更贴近官方双窗格方案。
           </p>
         </section>
 
+        <section id="view-sliding-pane">
+          <h2>4.3 SlidingPaneLayout 方案细节</h2>
+          <p>
+            <code>SlidingPaneLayout</code> 的适配逻辑可以理解为“一个组件承载两套交互”：窗口足够宽时是固定双窗格，窗口不足时是列表到详情的滑动导航。它特别适合邮件、设置、文件目录、联系人、会话列表等标准 List-Detail 页面。
+          </p>
+          <h3>状态控制责任</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>状态/动作</th>
+                <th>谁负责</th>
+                <th>具体逻辑</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>是否折叠</td>
+                <td><code>SlidingPaneLayout</code></td>
+                <td>组件在测量子 View 后判断宽度是否足够。足够则 <code>isSlideable=false</code>，列表和详情并排；不足则 <code>isSlideable=true</code>，进入滑动折叠模式。</td>
+              </tr>
+              <tr>
+                <td>详情是否打开</td>
+                <td><code>SlidingPaneLayout</code></td>
+                <td><code>isOpen</code> 表示滑动 pane 当前是否打开。紧凑态点击列表后调用 <code>openPane()</code>；返回时调用 <code>closePane()</code>。</td>
+              </tr>
+              <tr>
+                <td>选中哪条数据</td>
+                <td>业务层</td>
+                <td>Activity/ViewModel 保存 <code>selectedItem</code> 或 <code>selectedItemId</code>。折叠、展开或 pane 开关都不应该重置该状态。</td>
+              </tr>
+              <tr>
+                <td>列表点击行为</td>
+                <td>业务层 + 组件</td>
+                <td>业务层更新详情内容；如果 <code>isSlideable</code> 为 true，再调用 <code>openPane()</code>。展开并排态无需打开 pane。</td>
+              </tr>
+              <tr>
+                <td>返回键行为</td>
+                <td>业务层</td>
+                <td>仅当 <code>isSlideable &amp;&amp; isOpen</code> 时关闭详情 pane；否则交给 Activity 原有返回栈。</td>
+              </tr>
+              <tr>
+                <td>窗口尺寸变化</td>
+                <td><code>SlidingPaneLayout</code></td>
+                <td>窗口折叠、展开、分屏拖拽后，组件重新测量并更新 <code>isSlideable</code>。业务层不需要销毁并重建列表详情布局。</td>
+              </tr>
+            </tbody>
+          </table>
+          <h3>折叠态和展开态判断</h3>
+          <pre><code class="language-kotlin">private fun updateListDetailUi() {
+    val compactSlidingMode = slidingPaneLayout.isSlideable
+    val detailVisibleInCompact = slidingPaneLayout.isSlideable &amp;&amp; slidingPaneLayout.isOpen
+
+    if (compactSlidingMode) {
+        // 折叠态：一次只聚焦一个 pane。
+        // 可以显示详情页返回按钮，或让系统返回键关闭详情 pane。
+        detailBackButton.isVisible = detailVisibleInCompact
+    } else {
+        // 展开态：列表和详情同时可见。
+        // 不展示详情页返回按钮，列表点击只刷新详情内容。
+        detailBackButton.isVisible = false
+    }
+}</code></pre>
+          <table>
+            <thead>
+              <tr>
+                <th>职责</th>
+                <th>推荐处理</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>列表 pane</td>
+                <td>使用固定或最小宽度，例如 320dp 到 360dp；承载 <code>RecyclerView</code>、筛选和列表选中态。</td>
+              </tr>
+              <tr>
+                <td>详情 pane</td>
+                <td>使用剩余空间；紧凑屏下作为滑入页面；展开屏下与列表同时可见。</td>
+              </tr>
+              <tr>
+                <td>选中状态</td>
+                <td>放在 Activity/ViewModel 层，例如 <code>selectedItemId</code>，不要绑定到具体 pane 是否打开。</td>
+              </tr>
+              <tr>
+                <td>返回语义</td>
+                <td>如果详情 pane 已打开，先关闭 pane；否则退出 Activity 或交给上层导航。</td>
+              </tr>
+              <tr>
+                <td>窗口变化</td>
+                <td>不要手动销毁列表详情结构；让 <code>SlidingPaneLayout</code> 根据测量结果切换并排或滑动。</td>
+              </tr>
+            </tbody>
+          </table>
+          <pre><code class="language-kotlin">// Gradle 依赖
+implementation("androidx.slidingpanelayout:slidingpanelayout:&lt;version&gt;")
+
+// 核心交互
+fun onListItemClick(item: FoldableItem) {
+    selectedItem = item
+    renderDetail(item)
+    if (slidingPaneLayout.isSlideable) {
+        slidingPaneLayout.openPane()
+    }
+}
+
+fun handleBack(): Boolean {
+    return if (slidingPaneLayout.isSlideable &amp;&amp; slidingPaneLayout.isOpen) {
+        slidingPaneLayout.closePane()
+        true
+    } else {
+        false
+    }
+}</code></pre>
+          <div class="note">
+            如果页面只是标准列表详情，<code>SlidingPaneLayout</code> 比手写两个 <code>LinearLayout</code> 分支更稳；如果页面需要三窗格、复杂工具区或多组内容重排，再采用自定义 ViewGroup/Fragment 容器或 Activity Embedding。
+          </div>
+        </section>
+
         <section id="view-feed">
-          <h2>4.3 原生 Feeds 布局</h2>
+          <h2>4.4 原生 Feeds 布局</h2>
           <p>
             <code>FeedDemoView</code> 使用 <code>RecyclerView + GridLayoutManager</code> 实现动态列数。相比 Compose 的 <code>LazyVerticalGrid</code>，原生版本需要手动设置 <code>spanCount</code> 并通过 <code>SpanSizeLookup</code> 控制重点卡片跨列。
           </p>
@@ -770,7 +929,7 @@ NavigationSuiteScaffold(
         </section>
 
         <section id="view-files">
-          <h2>4.4 原生 Files 布局</h2>
+          <h2>4.5 原生 Files 布局</h2>
           <p>
             <code>FilesDemoView</code> 在紧凑屏下使用一个 <code>ScrollView</code> 串起标题、快捷操作、分类、最近文件和清理卡片。展开后根 <code>LinearLayout</code> 改为横向，清理卡片移动到右侧独立列。
           </p>
@@ -795,7 +954,7 @@ if (expanded) {
         </section>
 
         <section id="view-supporting">
-          <h2>4.5 原生辅助窗口布局</h2>
+          <h2>4.6 原生辅助窗口布局</h2>
           <p>
             <code>SupportingPaneDemoView</code> 手动模拟 Compose <code>SupportingPaneScaffold</code>。紧凑屏只显示 Main 或 Supporting；展开后同时显示 Main 和 Supporting；宽度达到约 1000dp 后再增加 Extra 工具栏。
           </p>
@@ -820,7 +979,7 @@ if (expanded) {
         </section>
 
         <section id="view-navigation">
-          <h2>4.6 原生自适应导航</h2>
+          <h2>4.7 原生自适应导航</h2>
           <p>
             <code>AdaptiveNavigationDemoView</code> 手动实现三种导航形态：紧凑底部导航、medium 侧边 rail、expanded 宽导航面。业务 destination 枚举保持不变。
           </p>
@@ -847,7 +1006,7 @@ if (mode == NavMode.BOTTOM) {
         </section>
 
         <section id="embedding">
-          <h2>4.7 Activity Embedding</h2>
+          <h2>4.8 Activity Embedding</h2>
           <p>
             Activity Embedding 适合既有多 Activity 架构：不把页面合并成单 Activity，也能在大屏上把 primary 和 secondary 并排展示。当前 demo 通过 AndroidX Window 的 <code>RuleController</code> 加载 XML 规则。
           </p>
@@ -898,11 +1057,11 @@ if (mode == NavMode.BOTTOM) {
             <tbody>
               <tr>
                 <td>Compact 宽度</td>
-                <td>列表详情、辅助窗口只显示一个主 pane；返回键能从详情/辅助页回到列表/主内容。</td>
+                <td>列表详情使用 <code>SlidingPaneLayout</code> 时默认显示列表；点击后滑入详情；返回键先关闭详情 pane。辅助窗口只显示一个主 pane。</td>
               </tr>
               <tr>
                 <td>Medium 宽度</td>
-                <td>列表详情双窗格；Files 左右分栏；Feed 两列；导航切换为 rail 或等价侧边模式。</td>
+                <td><code>SlidingPaneLayout</code> 列表详情并排显示；Files 左右分栏；Feed 两列；导航切换为 rail 或等价侧边模式。</td>
               </tr>
               <tr>
                 <td>Expanded 宽度</td>
@@ -923,11 +1082,9 @@ if (mode == NavMode.BOTTOM) {
             </tbody>
           </table>
           <h3>建议命令</h3>
-          <pre><code class="language-shell"># KMM Compose demo 编译检查
+          <pre><code class="language-shell"># KMM Compose 和 Android demo 编译检查
 ./gradlew :composeApp:assembleDebug
-
-# 原生 DemoTest 项目可在其项目根目录执行
-./gradlew :app:assembleDebug</code></pre>
+</code></pre>
         </section>
 
         <section id="sources">
@@ -940,18 +1097,20 @@ if (mode == NavMode.BOTTOM) {
             <li><a href="https://developer.android.com/develop/adaptive-apps/guides/build-adaptive-navigation?hl=zh-cn">Compose 构建自适应导航</a></li>
             <li><a href="https://developer.android.com/develop/ui/views/layout/canonical-layouts?hl=zh-cn">Android View 规范布局</a></li>
             <li><a href="https://developer.android.com/develop/ui/views/layout/twopane?hl=zh-cn">Android View 双窗格布局</a></li>
+            <li><a href="https://developer.android.com/develop/ui/views/layout/twopane?hl=zh-cn">SlidingPaneLayout 双窗格方案</a></li>
             <li><a href="https://developer.android.com/codelabs/basic-android-kotlin-training-adaptive-layouts?hl=zh-cn">自适应布局 Codelab</a></li>
             <li><a href="https://developer.android.com/develop/ui/views/layout/activity-embedding?hl=zh-cn#multiple_activities_secondary_pane">Activity 嵌入</a></li>
           </ul>
           <h3>本地源码</h3>
           <ul class="source-list">
-            <li>Compose 入口：<code>/Users/onuszhao/Code_KMM/KmmDemoTest/composeApp/src/commonMain/kotlin/com/example/kmmdemotest/demo/FoldableAdapteDemo.kt</code></li>
-            <li>Compose Android 实现：<code>/Users/onuszhao/Code_KMM/KmmDemoTest/composeApp/src/androidMain/kotlin/com/example/kmmdemotest/demo/</code></li>
-            <li>Android View 原生 demo：<code>/Users/onuszhao/Code_Old/DemoTest/app/src/main/kotlin/com/onus/demotest/feature/foldable/</code></li>
-            <li>Activity Embedding 规则：<code>/Users/onuszhao/Code_Old/DemoTest/app/src/main/res/xml/foldable_activity_embedding_rules.xml</code></li>
+            <li>HTML 文档：<code>/Users/onuszhao/Code_KMM/KmmDemoTest/composeApp/src/commonMain/kotlin/com/example/kmmdemotest/demo/foldable/android-foldable-adaptation.html</code></li>
+            <li>Compose 入口：<code>/Users/onuszhao/Code_KMM/KmmDemoTest/composeApp/src/commonMain/kotlin/com/example/kmmdemotest/demo/foldable/FoldableAdapteDemo.kt</code></li>
+            <li>Compose Android 实现：<code>/Users/onuszhao/Code_KMM/KmmDemoTest/composeApp/src/androidMain/kotlin/com/example/kmmdemotest/demo/foldable/</code></li>
+            <li>Android 原生入口：<code>/Users/onuszhao/Code_KMM/KmmDemoTest</code> 项目下的 <code>FoldableDemoActivity</code></li>
+            <li>SlidingPaneLayout 列表详情：<code>FoldableDemoActivity</code> 中新增的列表详情 demo 分支</li>
           </ul>
           <p class="small">
-            文档生成日期：2026-07-02。本文代码摘录来自本地 demo，内容侧重技术讲解，未复制完整源码。
+            文档更新日期：2026-07-03。本文代码摘录来自本地 demo，内容侧重技术讲解，未复制完整源码。
           </p>
         </section>
       </main>
